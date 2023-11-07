@@ -1,0 +1,75 @@
+version: "3.8"
+
+services:
+  router1:
+    # environment:
+    stdin_open: true
+    tty: true
+    networks:
+      - client_net1
+      - router_net1
+
+  router2:
+    # environment:
+    stdin_open: true
+    tty: true
+    networks:
+      - router_net1
+      - router_net2
+
+  router3:
+    # environment:
+    stdin_open: true
+    tty: true
+    networks:
+      - router_net2
+      - router_net3
+
+  router4:
+    # environment:
+    stdin_open: true
+    tty: true
+    networks:
+      - router_net3
+      - client_net2
+
+
+  client1:
+    # environment:
+    stdin_open: true
+    tty: true
+    depends_on:
+      - router1
+    networks:
+      - client_net1
+
+  client2:
+    # environment:
+    stdin_open: true
+    tty: true
+    depends_on:
+      - router3
+    networks:
+      - client_net2
+
+  networks:
+    client_net1:
+      driver: default
+      config:
+        - subnet: 192.168.0.0/24
+    client_net2:
+      driver: default
+      config:
+        - subnet: 192.168.10.0/24
+    router_net1:
+      driver: default
+      config:
+        - subnet: 172.21.0.0/24
+    router_net2:
+      driver: default
+      config:
+        - subnet: 172.22.0.0/24
+    router_net3:
+      driver: default
+      config:
+        - subnet: 172.23.0.0/24
