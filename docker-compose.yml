@@ -2,7 +2,9 @@ version: "3.8"
 
 services:
   router1:
-    # environment:
+    image: router-image
+    container_name: router-1
+    build: ./router
     stdin_open: true
     tty: true
     networks:
@@ -10,7 +12,9 @@ services:
       - router_net1
 
   router2:
-    # environment:
+    image: router-image
+    container_name: router-2
+    build: ./router
     stdin_open: true
     tty: true
     networks:
@@ -18,24 +22,34 @@ services:
       - router_net2
 
   router3:
-    # environment:
+    image: router-image
+    container_name: router-3
+    build: ./router
+    stdin_open: true
+    tty: true
+    networks:
+      - router_net1
+      - client_net2
+  
+  router4:
+    image: router-image
+    container_name: router-4
+    build: ./router
     stdin_open: true
     tty: true
     networks:
       - router_net2
       - router_net3
 
-  router4:
-    # environment:
-    stdin_open: true
-    tty: true
-    networks:
-      - router_net3
-      - client_net2
-
-
   client1:
-    # environment:
+    image: client-image
+    container_name: client-1
+    build: ./client
+    environment:
+      - PORT=${PORT}
+      - DATA_PATH=${DATA_PATH}
+      - CAN_STREAM=${CAN_STREAM1}
+      - CONTAINER_NAME=client-1
     stdin_open: true
     tty: true
     depends_on:
@@ -44,7 +58,14 @@ services:
       - client_net1
 
   client2:
-    # environment:
+    image: client-image
+    container_name: client-2
+    build: ./client
+    environment:
+      - PORT=${PORT}
+      - DATA_PATH=${DATA_PATH}
+      - CAN_STREAM=${CAN_STREAM2}
+      - CONTAINER_NAME=client-2
     stdin_open: true
     tty: true
     depends_on:
@@ -52,24 +73,29 @@ services:
     networks:
       - client_net2
 
-  networks:
-    client_net1:
+networks:
+  client_net1:
+    ipam:
       driver: default
       config:
         - subnet: 192.168.0.0/24
-    client_net2:
+  client_net2:
+    ipam:
       driver: default
       config:
-        - subnet: 192.168.10.0/24
-    router_net1:
+        - subnet: 172.168.0.0/24
+  router_net1:
+    ipam:
       driver: default
       config:
         - subnet: 172.21.0.0/24
-    router_net2:
+  router_net2:
+    ipam:
       driver: default
       config:
         - subnet: 172.22.0.0/24
-    router_net3:
+  router_net3:
+    ipam:
       driver: default
       config:
         - subnet: 172.23.0.0/24
