@@ -1,11 +1,13 @@
 FROM golang:1.21.4-alpine3.18
 
-WORKDIR /src/client
+WORKDIR /src/endpoint
 
 COPY go.mod .
 
 RUN go mod download
 COPY . .
-RUN go build -o /client
+RUN go build -o /endpoint
+RUN apk update
+RUN apk add tcpdump
 
-CMD ["/client"]
+CMD tcpdump -i any -w traffic.pcap & /endpoint
