@@ -6,11 +6,12 @@ services:
     container_name: traffic-capture
     build: ./traffic_capture
     networks:
-      - endpoint_net1
-      - endpoint_net2
-      - router_net1
-      - router_net2
-      - router_net3
+      endpoint_net1:
+      endpoint_net2:
+      router_net1:
+      router_net2:
+      router_net3:
+    privileged: true
 
   router1:
     image: router-image
@@ -59,7 +60,8 @@ services:
     environment:
       - PORT=${PORT}
       - DATA_PATH=${DATA_PATH}
-      - CAN_STREAM=${CAN_STREAM1}
+      - SOURCE_ID=${SOURCE_ID1}
+      - DEST_ID=${DEST_ID1}
       - ROLE=${ROLE1}
     stdin_open: true
     tty: true
@@ -79,7 +81,6 @@ services:
     environment:
       - PORT=${PORT}
       - DATA_PATH=${DATA_PATH}
-      - CAN_STREAM=${CAN_STREAM2}
       - ROLE=${ROLE2}
     stdin_open: true
     tty: true
