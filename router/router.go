@@ -3,13 +3,17 @@ package main
 import (
 	"net"
 	"os"
-	"strings"
 	"sync"
 )
 
 var wg sync.WaitGroup
+var forwardingTable ForwardingTable
 
 func main() {
+
+	forwardingTable = ForwardingTable{
+		entries: make(map[string]Hop),
+	}
 
 	entityAddrList := getEntityAddrs()
 	for _, addr := range entityAddrList {
@@ -37,6 +41,8 @@ func main() {
 func receiveData(socket *net.UDPConn, sendAddrList []*net.UDPAddr, entityAddrList []string) {
 	defer wg.Done()
 
+	var tempHop *net.UDPAddr
+
 	for {
 		buffer := make([]byte, 65000)
 
@@ -51,12 +57,34 @@ func receiveData(socket *net.UDPConn, sendAddrList []*net.UDPAddr, entityAddrLis
 			dataBuffer := make([]byte, n)
 			copy(dataBuffer, buffer[:n])
 
-			go forwardData(socket, dataBuffer, senderAddr, sendAddrList)
+			source, transferType, dest := decode(dataBuffer)
+			if transferType == 0 {
+				tempHop = senderAddr
+				go broadcastData(socket, dataBuffer, senderAddr, sendAddrList)
+			} else if transferType == 1 {
+				if _, exists := forwardingTable.GetRow(source); !exists {
+					forwardingTable.AddRow(source, tempHop)
+				}
+				if nextHop, exists := forwardingTable.GetRow(dest); exists {
+					go sendDirectly(socket, dataBuffer, nextHop.IPAddress)
+				} else {
+					go broadcastData(socket, dataBuffer, senderAddr, sendAddrList)
+				}
+			} else if transferType == 2 {
+				if _, exists := forwardingTable.GetRow(source); !exists {
+					forwardingTable.AddRow(source, senderAddr)
+				}
+				if _, exists := forwardingTable.GetRow(dest); !exists {
+					forwardingTable.AddRow(dest, tempHop)
+				}
+				nextHop, _ := forwardingTable.GetRow(dest)
+				go sendDirectly(socket, dataBuffer, nextHop.IPAddress)
+			}
 		}
 	}
 }
 
-func forwardData(socket *net.UDPConn, data []byte, senderAddr *net.UDPAddr, sendAddrList []*net.UDPAddr) {
+func broadcastData(socket *net.UDPConn, data []byte, senderAddr *net.UDPAddr, sendAddrList []*net.UDPAddr) {
 	sendList := createSendingList(senderAddr, sendAddrList)
 	for _, addr := range sendList {
 		_, err := socket.WriteToUDP(data, addr)
@@ -69,55 +97,11 @@ func forwardData(socket *net.UDPConn, data []byte, senderAddr *net.UDPAddr, send
 	}
 }
 
-func createSendingList(exception *net.UDPAddr, list []*net.UDPAddr) []*net.UDPAddr {
-	sendList := make([]*net.UDPAddr, 0)
-	exceptionMasked, err := applyMask(exception.String())
+func sendDirectly(socket *net.UDPConn, buffer []byte, nextHop *net.UDPAddr) {
+	_, err := socket.WriteToUDP(buffer, nextHop)
 	if err != nil {
-		println("Error masking exception address: ", err.Error())
-		os.Exit(0)
+		println("Error sending data: ", err.Error())
+	} else {
+		println("Sent data to ", nextHop.String())
 	}
-	for _, addr := range list {
-		if addr.String() != exceptionMasked.String() {
-			sendList = append(sendList, addr)
-			println("Added ", addr.String(), " to sending list")
-		}
-	}
-	return sendList
-}
-
-func applyMask(addr string) (*net.UDPAddr, error) {
-	parts := strings.Split(addr, ".")
-	parts[2] = "255"
-	parts[3] = "255:5000"
-	return net.ResolveUDPAddr("udp", strings.Join(parts, "."))
-}
-
-func getEntityAddrs() []string {
-	hostname, err := os.Hostname()
-	if err != nil {
-		println("Error getting hostname: ", err.Error())
-		os.Exit(0)
-	}
-
-	ips, _ := net.LookupIP(hostname)
-
-	ipStrings := make([]string, len(ips))
-	for i, ip := range ips {
-		ipStrings[i] = ip.String() + ":5000"
-	}
-
-	return ipStrings
-}
-
-func prepSendAddr(addrs []string) []*net.UDPAddr {
-	sendAddrs := make([]*net.UDPAddr, 0)
-	for _, addr := range addrs {
-		sendAddr, err := applyMask(addr)
-		if err != nil {
-			println("Error masking and resolving address: ", err.Error())
-			os.Exit(0)
-		}
-		sendAddrs = append(sendAddrs, sendAddr)
-	}
-	return sendAddrs
 }

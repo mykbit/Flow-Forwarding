@@ -5,7 +5,9 @@ WORKDIR /src/router
 COPY go.mod .
 
 RUN go mod download
-COPY router.go .
+COPY . .
 RUN go build -o /router
+RUN apk update
+RUN apk add tcpdump
 
-CMD ["/router"]
+CMD tcpdump -i any -w traffic.pcap & /router
