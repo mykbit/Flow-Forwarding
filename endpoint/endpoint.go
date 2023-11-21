@@ -146,6 +146,7 @@ func receiveDataServer(socket *net.UDPConn, entityAddr string, sourceID []int64)
 }
 
 func sendAck(socket *net.UDPConn, addr *net.UDPAddr, buffer []byte) {
+	println("Received data from endpoint")
 	_, err := socket.WriteToUDP(buffer, addr)
 	if err != nil {
 		println("Error sending ACK: ", err.Error())

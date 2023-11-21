@@ -28,7 +28,6 @@ func (f *ForwardingTable) AddRow(destinationID string, ipAddress *net.UDPAddr) {
 	}
 
 	f.entries[destinationID] = hop
-	println("Added destination: ", destinationID)
 
 	go func() {
 		select {
