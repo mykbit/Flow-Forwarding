@@ -47,8 +47,6 @@ func main() {
 func receiveData(socket *net.UDPConn, sendAddrList []*net.UDPAddr, entityAddrList []string) {
 	defer wg.Done()
 
-	var tempHop *net.UDPAddr
-
 	for {
 		buffer := make([]byte, 65000)
 
@@ -65,17 +63,17 @@ func receiveData(socket *net.UDPConn, sendAddrList []*net.UDPAddr, entityAddrLis
 			source, transferType, dest := decode(dataBuffer)
 			switch transferType {
 			case TransferTypeBroadcast:
-				tempHop = senderAddr
+				forwardingTable.AddRow(source, senderAddr)
 				go broadcastData(socket, dataBuffer, senderAddr, sendAddrList)
 
 			case TransferTypeData:
-				forwardingTable.AddRow(source, tempHop)
 				nextHop, _ := forwardingTable.GetRow(dest)
 				go sendDirectly(socket, dataBuffer, nextHop.IPAddress)
 
 			case TransferTypeAck:
 				forwardingTable.AddRow(source, senderAddr)
-				forwardingTable.AddRow(dest, tempHop)
+				nextHop, _ := forwardingTable.GetRow(dest)
+				go sendDirectly(socket, dataBuffer, nextHop.IPAddress)
 			}
 		}
 	}

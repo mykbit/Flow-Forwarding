@@ -47,7 +47,6 @@ func createSendingList(exception *net.UDPAddr, list []*net.UDPAddr) []*net.UDPAd
 	for _, addr := range list {
 		if addr.String() != exceptionMasked.String() {
 			sendList = append(sendList, addr)
-			println("Added ", addr.String(), " to sending list")
 		}
 	}
 	return sendList
