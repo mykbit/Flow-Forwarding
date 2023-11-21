@@ -6,11 +6,11 @@ services:
     container_name: traffic-capture
     build: ./traffic_capture
     networks:
-      endpoint_net1:
-      endpoint_net2:
-      router_net1:
-      router_net2:
-      router_net3:
+      - endpoint_net1
+      - endpoint_net2
+      - endpoint_net3
+      - router_net1
+      - router_net2
     privileged: true
 
   router1:
@@ -51,7 +51,17 @@ services:
     tty: true
     networks:
       - router_net2
-      - router_net3
+      - endpoint_net3
+    
+  router5:
+    image: router-image
+    container_name: router-5
+    build: ./router
+    stdin_open: true
+    tty: true
+    networks:
+      - router_net2
+      - endpoint_net4
 
   endpoint1:
     image: endpoint-image
@@ -70,6 +80,7 @@ services:
       - router2
       - router3
       - router4
+      - router5
       - endpoint2
     networks:
       - endpoint_net1
@@ -81,6 +92,7 @@ services:
     environment:
       - PORT=${PORT}
       - DATA_PATH=${DATA_PATH}
+      - SOURCE_ID=${SOURCE_ID2}
       - ROLE=${ROLE2}
     stdin_open: true
     tty: true
@@ -89,8 +101,53 @@ services:
       - router2
       - router3
       - router4
+      - router5
     networks:
       - endpoint_net2
+
+  endpoint3:
+    image: endpoint-image
+    container_name: endpoint-3
+    build: ./endpoint
+    environment:
+      - PORT=${PORT}
+      - DATA_PATH=${DATA_PATH}
+      - SOURCE_ID=${SOURCE_ID3}
+      - DEST_ID=${DEST_ID3}
+      - ROLE=${ROLE3}
+    stdin_open: true
+    tty: true
+    depends_on:
+      - router1
+      - router2
+      - router3
+      - router4
+      - router5
+      - endpoint2
+    networks:
+      - endpoint_net3
+
+  endpoint4:
+    image: endpoint-image
+    container_name: endpoint-4
+    build: ./endpoint
+    environment:
+      - PORT=${PORT}
+      - DATA_PATH=${DATA_PATH}
+      - SOURCE_ID=${SOURCE_ID4}
+      - DEST_ID=${DEST_ID4}
+      - ROLE=${ROLE4}
+    stdin_open: true
+    tty: true
+    depends_on:
+      - router1
+      - router2
+      - router3
+      - router4
+      - router5
+      - endpoint2
+    networks:
+      - endpoint_net4
 
 networks:
   endpoint_net1:
@@ -103,6 +160,16 @@ networks:
       driver: default
       config:
         - subnet: 124.20.0.0/16
+  endpoint_net3:
+    ipam:
+      driver: default
+      config:
+        - subnet: 124.30.0.0/16
+  endpoint_net4:
+    ipam:
+      driver: default
+      config:
+        - subnet: 124.40.0.0/16
   router_net1:
     ipam:
       driver: default
@@ -113,8 +180,3 @@ networks:
       driver: default
       config:
         - subnet: 10.22.0.0/16
-  router_net3:
-    ipam:
-      driver: default
-      config:
-        - subnet: 10.23.0.0/16
