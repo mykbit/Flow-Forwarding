@@ -6,6 +6,12 @@ import (
 	"sync"
 )
 
+const (
+	TransferTypeBroadcast = iota
+	TransferTypeData
+	TransferTypeAck
+)
+
 var wg sync.WaitGroup
 var forwardingTable ForwardingTable
 
@@ -52,33 +58,24 @@ func receiveData(socket *net.UDPConn, sendAddrList []*net.UDPAddr, entityAddrLis
 			os.Exit(0)
 		}
 		if senderAddrStr := senderAddr.String(); senderAddrStr != entityAddrList[0] && senderAddrStr != entityAddrList[1] {
-			println("Received data from ", senderAddr.String())
 
 			dataBuffer := make([]byte, n)
 			copy(dataBuffer, buffer[:n])
 
 			source, transferType, dest := decode(dataBuffer)
-			if transferType == 0 {
+			switch transferType {
+			case TransferTypeBroadcast:
 				tempHop = senderAddr
 				go broadcastData(socket, dataBuffer, senderAddr, sendAddrList)
-			} else if transferType == 1 {
-				if _, exists := forwardingTable.GetRow(source); !exists {
-					forwardingTable.AddRow(source, tempHop)
-				}
-				if nextHop, exists := forwardingTable.GetRow(dest); exists {
-					go sendDirectly(socket, dataBuffer, nextHop.IPAddress)
-				} else {
-					go broadcastData(socket, dataBuffer, senderAddr, sendAddrList)
-				}
-			} else if transferType == 2 {
-				if _, exists := forwardingTable.GetRow(source); !exists {
-					forwardingTable.AddRow(source, senderAddr)
-				}
-				if _, exists := forwardingTable.GetRow(dest); !exists {
-					forwardingTable.AddRow(dest, tempHop)
-				}
+
+			case TransferTypeData:
+				forwardingTable.AddRow(source, tempHop)
 				nextHop, _ := forwardingTable.GetRow(dest)
 				go sendDirectly(socket, dataBuffer, nextHop.IPAddress)
+
+			case TransferTypeAck:
+				forwardingTable.AddRow(source, senderAddr)
+				forwardingTable.AddRow(dest, tempHop)
 			}
 		}
 	}
@@ -91,8 +88,6 @@ func broadcastData(socket *net.UDPConn, data []byte, senderAddr *net.UDPAddr, se
 		if err != nil {
 			println("Error sending data: ", err.Error())
 			continue
-		} else {
-			println("Sent data to ", addr.String())
 		}
 	}
 }
@@ -101,7 +96,5 @@ func sendDirectly(socket *net.UDPConn, buffer []byte, nextHop *net.UDPAddr) {
 	_, err := socket.WriteToUDP(buffer, nextHop)
 	if err != nil {
 		println("Error sending data: ", err.Error())
-	} else {
-		println("Sent data to ", nextHop.String())
 	}
 }
