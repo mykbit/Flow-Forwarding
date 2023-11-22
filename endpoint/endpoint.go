@@ -5,11 +5,10 @@ import (
 	"os"
 	"strconv"
 	"sync"
-	"time"
 )
 
 var wg sync.WaitGroup
-
+var frameIndex int = 1
 var forwardingTable ForwardingTable
 
 func main() {
@@ -70,26 +69,25 @@ func lookupEndpoint(socket *net.UDPConn, addr *net.UDPAddr, sourceID, destID []i
 }
 
 func streamData(socket *net.UDPConn, data []os.DirEntry, dataPath string, addr *net.UDPAddr, sourceID, destID []int64) {
-	// limited by 5 for testing purposes
-	for i := 1; i <= 5; i++ {
-		dataPiece, err := os.ReadFile(dataPath + "/frame" + strconv.Itoa(i) + ".jpg")
-		if err != nil {
-			println("Error reading data: ", err.Error())
-		}
-
-		buffer := encode(make([]byte, 9+len(dataPiece)), sourceID, 1, destID)
-		copy(buffer[9:], dataPiece)
-
-		n, err := socket.WriteToUDP(buffer, addr)
-		if err != nil {
-			println("Error sending data: ", err.Error())
-			continue
-		}
-
-		println("Sent data from client: ", n)
-		time.Sleep(5 * time.Second)
+	dataPiece, err := os.ReadFile(dataPath + "/frame" + strconv.Itoa(frameIndex) + ".jpg")
+	if err != nil {
+		println("Error reading data: ", err.Error())
 	}
-	sendInfo(socket, addr, encode(make([]byte, 9), sourceID, 3, destID))
+
+	buffer := encode(make([]byte, 9+len(dataPiece)), sourceID, 1, destID)
+	copy(buffer[9:], dataPiece)
+
+	n, err := socket.WriteToUDP(buffer, addr)
+	if err != nil {
+		println("Error sending data: ", err.Error())
+	}
+
+	println("Sent data from client: ", n)
+	frameIndex++
+	if frameIndex >= len(data) {
+		sendInfo(socket, addr, encode(make([]byte, 9), sourceID, 3, destID))
+		wg.Done()
+	}
 }
 
 func receiveDataClient(socket *net.UDPConn, entityAddr string, data []os.DirEntry, dataPath string) {
@@ -108,11 +106,7 @@ func receiveDataClient(socket *net.UDPConn, entityAddr string, data []os.DirEntr
 			source, transferType, dest := decodeToStr(buffer)
 			if transferType == 2 {
 				println("Received ACK from entity at ", addrStr)
-				if _, exists := forwardingTable.GetRow(source); !exists {
-					forwardingTable.AddRow(source, addr)
-				}
-				nextHop, _ := forwardingTable.GetRow(source)
-				go streamData(socket, data, dataPath, nextHop.IPAddress, prepID(dest), prepID(source))
+				go streamData(socket, data, dataPath, addr, prepID(dest), prepID(source))
 			}
 		}
 	}
@@ -137,6 +131,8 @@ func receiveDataServer(socket *net.UDPConn, entityAddr string, sourceID []int64)
 			if transferType == 0 {
 				println("Endpoint found!", addrStr)
 				forwardingTable.AddRow(source, addr)
+				go sendInfo(socket, addr, encode(make([]byte, 9), prepID(dest), 2, prepID(source)))
+			} else if transferType == 1 {
 				go sendInfo(socket, addr, encode(make([]byte, 9), prepID(dest), 2, prepID(source)))
 			}
 		}
