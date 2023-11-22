@@ -79,10 +79,6 @@ func streamData(socket *net.UDPConn, data []os.DirEntry, dataPath string, addr *
 
 	println("Sent data from client: ", n)
 	frameIndex++
-	if frameIndex >= len(data) {
-		sendInfo(socket, addr, encode(make([]byte, 9), sourceID, 3, destID))
-		wg.Done()
-	}
 }
 
 func receiveDataClient(socket *net.UDPConn, entityAddr string, data []os.DirEntry, dataPath string) {
@@ -101,7 +97,11 @@ func receiveDataClient(socket *net.UDPConn, entityAddr string, data []os.DirEntr
 			source, transferType, dest := decodeToStr(buffer)
 			if transferType == 2 {
 				println("Received ACK from entity at ", addrStr)
-				go streamData(socket, data, dataPath, addr, prepID(dest), prepID(source))
+				if frameIndex >= len(data) {
+					sendInfo(socket, addr, encode(make([]byte, 9), prepID(dest), 3, prepID(source)))
+				} else {
+					go streamData(socket, data, dataPath, addr, prepID(dest), prepID(source))
+				}
 			}
 		}
 	}
@@ -122,11 +122,11 @@ func receiveDataServer(socket *net.UDPConn, entityAddr string, sourceID []int64)
 		if addrStr := addr.String(); addrStr != entityAddr {
 			// TODO: Check if dest is this entity
 			source, transferType, dest := decodeToStr(buffer)
-			println("Received data from ", source)
 			if transferType == 0 {
 				println("Endpoint found!", addrStr)
 				go sendInfo(socket, addr, encode(make([]byte, 9), prepID(dest), 2, prepID(source)))
 			} else if transferType == 1 {
+				println("Received data from ", source)
 				go sendInfo(socket, addr, encode(make([]byte, 9), prepID(dest), 2, prepID(source)))
 			}
 		}
