@@ -70,8 +70,8 @@ func lookupEndpoint(socket *net.UDPConn, addr *net.UDPAddr, sourceID, destID []i
 }
 
 func streamData(socket *net.UDPConn, data []os.DirEntry, dataPath string, addr *net.UDPAddr, sourceID, destID []int64) {
-	defer wg.Done()
-	for i := 1; i <= len(data); i++ {
+	// limited by 5 for testing purposes
+	for i := 1; i <= 5; i++ {
 		dataPiece, err := os.ReadFile(dataPath + "/frame" + strconv.Itoa(i) + ".jpg")
 		if err != nil {
 			println("Error reading data: ", err.Error())
@@ -89,11 +89,12 @@ func streamData(socket *net.UDPConn, data []os.DirEntry, dataPath string, addr *
 		println("Sent data from client: ", n)
 		time.Sleep(5 * time.Second)
 	}
+	sendInfo(socket, addr, encode(make([]byte, 9), sourceID, 3, destID))
 }
 
 func receiveDataClient(socket *net.UDPConn, entityAddr string, data []os.DirEntry, dataPath string) {
 	defer wg.Done()
-	var i int
+
 	for {
 		buffer := make([]byte, 65000)
 
@@ -104,19 +105,15 @@ func receiveDataClient(socket *net.UDPConn, entityAddr string, data []os.DirEntr
 		}
 
 		if addrStr := addr.String(); addrStr != entityAddr {
-			println("Received ACK from entity at ", addrStr)
 			source, transferType, dest := decodeToStr(buffer)
 			if transferType == 2 {
+				println("Received ACK from entity at ", addrStr)
 				if _, exists := forwardingTable.GetRow(source); !exists {
 					forwardingTable.AddRow(source, addr)
 				}
 				nextHop, _ := forwardingTable.GetRow(source)
-				if i == 0 {
-					go streamData(socket, data, dataPath, nextHop.IPAddress, prepID(dest), prepID(source))
-				}
-				i++
+				go streamData(socket, data, dataPath, nextHop.IPAddress, prepID(dest), prepID(source))
 			}
-
 		}
 	}
 }
@@ -134,23 +131,25 @@ func receiveDataServer(socket *net.UDPConn, entityAddr string, sourceID []int64)
 		}
 
 		if addrStr := addr.String(); addrStr != entityAddr {
-
+			// TODO: Check if dest is this entity
 			source, transferType, dest := decodeToStr(buffer)
+			println("Received data from ", source)
 			if transferType == 0 {
 				println("Endpoint found!", addrStr)
 				forwardingTable.AddRow(source, addr)
+				go sendInfo(socket, addr, encode(make([]byte, 9), prepID(dest), 2, prepID(source)))
 			}
-			go sendAck(socket, addr, encode(make([]byte, 9), prepID(dest), 2, prepID(source)))
 		}
 	}
 }
 
-func sendAck(socket *net.UDPConn, addr *net.UDPAddr, buffer []byte) {
-	println("Received data from endpoint")
+func sendInfo(socket *net.UDPConn, addr *net.UDPAddr, buffer []byte) {
 	_, err := socket.WriteToUDP(buffer, addr)
 	if err != nil {
 		println("Error sending ACK: ", err.Error())
-	} else {
+	} else if buffer[4] == 2 {
 		println("Sent ACK to ", addr.String())
+	} else if buffer[4] == 3 {
+		println("Sent REMOVE_REQUEST to ", addr.String())
 	}
 }

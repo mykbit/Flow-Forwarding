@@ -10,6 +10,7 @@ const (
 	TransferTypeBroadcast = iota
 	TransferTypeData
 	TransferTypeAck
+	TransferTypeRemove
 )
 
 var wg sync.WaitGroup
@@ -74,6 +75,10 @@ func receiveData(socket *net.UDPConn, sendAddrList []*net.UDPAddr, entityAddrLis
 				forwardingTable.AddRow(source, senderAddr)
 				nextHop, _ := forwardingTable.GetRow(dest)
 				go sendDirectly(socket, dataBuffer, nextHop.IPAddress)
+
+			case TransferTypeRemove:
+				forwardingTable.RemoveRow(source)
+				go broadcastData(socket, dataBuffer, senderAddr, sendAddrList)
 			}
 		}
 	}
