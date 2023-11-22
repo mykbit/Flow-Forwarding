@@ -9,13 +9,8 @@ import (
 
 var wg sync.WaitGroup
 var frameIndex int = 1
-var forwardingTable ForwardingTable
 
 func main() {
-
-	forwardingTable = ForwardingTable{
-		entries: make(map[string]Hop),
-	}
 
 	sourceID := prepID(os.Getenv("SOURCE_ID"))
 	destID := prepID(os.Getenv("DEST_ID"))
@@ -130,7 +125,6 @@ func receiveDataServer(socket *net.UDPConn, entityAddr string, sourceID []int64)
 			println("Received data from ", source)
 			if transferType == 0 {
 				println("Endpoint found!", addrStr)
-				forwardingTable.AddRow(source, addr)
 				go sendInfo(socket, addr, encode(make([]byte, 9), prepID(dest), 2, prepID(source)))
 			} else if transferType == 1 {
 				go sendInfo(socket, addr, encode(make([]byte, 9), prepID(dest), 2, prepID(source)))
