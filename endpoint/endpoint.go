@@ -12,8 +12,6 @@ var frameIndex int = 1
 
 func main() {
 
-	sourceID := prepID(os.Getenv("SOURCE_ID"))
-	destID := prepID(os.Getenv("DEST_ID"))
 	roleStr := os.Getenv("ROLE")
 
 	entityAddr := getEntityAddr()
@@ -42,25 +40,28 @@ func main() {
 	switch roleStr {
 	case "client":
 		wg.Add(1)
-		lookupEndpoint(socket, broadcastAddr, sourceID, destID)
+		lookupEndpoint(socket, broadcastAddr)
 		go receiveDataClient(socket, entityAddr, data, dataPath)
 		wg.Wait()
 	case "server":
 		wg.Add(1)
-		go receiveDataServer(socket, entityAddr, sourceID)
+		go receiveDataServer(socket, entityAddr)
 		wg.Wait()
 	default:
 		println("Invalid role: ", roleStr)
 	}
 }
 
-func lookupEndpoint(socket *net.UDPConn, addr *net.UDPAddr, sourceID, destID []int64) {
+func lookupEndpoint(socket *net.UDPConn, addr *net.UDPAddr) {
+	sourceID := prepID(os.Getenv("SOURCE_ID"))
+	destID := prepID(os.Getenv("DEST_ID"))
 	buffer := encode(make([]byte, 9), sourceID, 0, destID)
 
 	_, err := socket.WriteToUDP(buffer, addr)
 	if err != nil {
 		println("Error sending data: ", err.Error())
 	}
+	println("Sent lookup")
 }
 
 func streamData(socket *net.UDPConn, data []os.DirEntry, dataPath string, addr *net.UDPAddr, sourceID, destID []int64) {
@@ -107,7 +108,7 @@ func receiveDataClient(socket *net.UDPConn, entityAddr string, data []os.DirEntr
 	}
 }
 
-func receiveDataServer(socket *net.UDPConn, entityAddr string, sourceID []int64) {
+func receiveDataServer(socket *net.UDPConn, entityAddr string) {
 	defer wg.Done()
 
 	for {
@@ -119,9 +120,9 @@ func receiveDataServer(socket *net.UDPConn, entityAddr string, sourceID []int64)
 			continue
 		}
 
-		if addrStr := addr.String(); addrStr != entityAddr {
-			// TODO: Check if dest is this entity
-			source, transferType, dest := decodeToStr(buffer)
+		source, transferType, dest := decodeToStr(buffer)
+
+		if addrStr := addr.String(); addrStr != entityAddr && dest == os.Getenv("SOURCE_ID") {
 			if transferType == 0 {
 				println("Endpoint found!", addrStr)
 				go sendInfo(socket, addr, encode(make([]byte, 9), prepID(dest), 2, prepID(source)))

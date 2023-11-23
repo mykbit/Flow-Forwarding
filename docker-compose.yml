@@ -81,7 +81,8 @@ services:
       - router3
       - router4
       - router5
-      - endpoint2
+      - endpoint3
+      - endpoint4
     networks:
       - endpoint_net1
 
@@ -93,6 +94,7 @@ services:
       - PORT=${PORT}
       - DATA_PATH=${DATA_PATH}
       - SOURCE_ID=${SOURCE_ID2}
+      - DEST_ID=${DEST_ID2}
       - ROLE=${ROLE2}
     stdin_open: true
     tty: true
@@ -102,6 +104,8 @@ services:
       - router3
       - router4
       - router5
+      - endpoint3
+      - endpoint4
     networks:
       - endpoint_net2
 
@@ -123,7 +127,6 @@ services:
       - router3
       - router4
       - router5
-      - endpoint2
     networks:
       - endpoint_net3
 
@@ -145,7 +148,6 @@ services:
       - router3
       - router4
       - router5
-      - endpoint2
     networks:
       - endpoint_net4
 

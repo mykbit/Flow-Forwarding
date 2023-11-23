@@ -62,24 +62,24 @@ func encode(buffer []byte, sourceID []int64, transferType int, destID []int64) [
 	return buffer
 }
 
-func decodeToInt(buffer []byte) ([]int64, int, []int64) {
-	var sourceID []int64
-	var transferType int
-	var destID []int64
+// func decodeToInt(buffer []byte) ([]int64, int, []int64) {
+// 	var sourceID []int64
+// 	var transferType int
+// 	var destID []int64
 
-	sourceID = append(sourceID, int64(buffer[0]))
-	sourceID = append(sourceID, int64(buffer[1]))
-	sourceID = append(sourceID, int64(buffer[2]))
-	sourceID = append(sourceID, int64(buffer[3]))
-	transferType = int(buffer[4])
-	destID = append(destID, int64(buffer[5]))
-	destID = append(destID, int64(buffer[6]))
-	destID = append(destID, int64(buffer[7]))
-	destID = append(destID, int64(buffer[8]))
+// 	sourceID = append(sourceID, int64(buffer[0]))
+// 	sourceID = append(sourceID, int64(buffer[1]))
+// 	sourceID = append(sourceID, int64(buffer[2]))
+// 	sourceID = append(sourceID, int64(buffer[3]))
+// 	transferType = int(buffer[4])
+// 	destID = append(destID, int64(buffer[5]))
+// 	destID = append(destID, int64(buffer[6]))
+// 	destID = append(destID, int64(buffer[7]))
+// 	destID = append(destID, int64(buffer[8]))
 
-	return sourceID, transferType, destID
+// 	return sourceID, transferType, destID
 
-}
+// }
 
 func decodeToStr(buffer []byte) (string, int, string) {
 	var source, dest string
