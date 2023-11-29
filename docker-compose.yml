@@ -72,7 +72,6 @@ services:
       - DATA_PATH=${DATA_PATH}
       - SOURCE_ID=${SOURCE_ID1}
       - DEST_ID=${DEST_ID1}
-      - ROLE=${ROLE1}
     stdin_open: true
     tty: true
     depends_on:
@@ -81,8 +80,6 @@ services:
       - router3
       - router4
       - router5
-      - endpoint3
-      - endpoint4
     networks:
       - endpoint_net1
 
@@ -95,7 +92,6 @@ services:
       - DATA_PATH=${DATA_PATH}
       - SOURCE_ID=${SOURCE_ID2}
       - DEST_ID=${DEST_ID2}
-      - ROLE=${ROLE2}
     stdin_open: true
     tty: true
     depends_on:
@@ -104,8 +100,6 @@ services:
       - router3
       - router4
       - router5
-      - endpoint3
-      - endpoint4
     networks:
       - endpoint_net2
 
@@ -118,7 +112,6 @@ services:
       - DATA_PATH=${DATA_PATH}
       - SOURCE_ID=${SOURCE_ID3}
       - DEST_ID=${DEST_ID3}
-      - ROLE=${ROLE3}
     stdin_open: true
     tty: true
     depends_on:
@@ -139,7 +132,6 @@ services:
       - DATA_PATH=${DATA_PATH}
       - SOURCE_ID=${SOURCE_ID4}
       - DEST_ID=${DEST_ID4}
-      - ROLE=${ROLE4}
     stdin_open: true
     tty: true
     depends_on:

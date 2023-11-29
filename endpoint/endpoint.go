@@ -5,15 +5,20 @@ import (
 	"os"
 	"strconv"
 	"sync"
+	"time"
+)
+
+const (
+	TransferTypeBroadcast = iota
+	TransferTypeData
+	TransferTypeAck
+	TransferTypeRemove
 )
 
 var wg sync.WaitGroup
 var frameIndex int = 1
 
 func main() {
-
-	roleStr := os.Getenv("ROLE")
-
 	entityAddr := getEntityAddr()
 	entityAddrMasked := applyMask(entityAddr)
 
@@ -37,22 +42,14 @@ func main() {
 		os.Exit(0)
 	}
 
-	switch roleStr {
-	case "client":
-		wg.Add(1)
-		lookupEndpoint(socket, broadcastAddr)
-		go receiveDataClient(socket, entityAddr, data, dataPath)
-		wg.Wait()
-	case "server":
-		wg.Add(1)
-		go receiveDataServer(socket, entityAddr)
-		wg.Wait()
-	default:
-		println("Invalid role: ", roleStr)
-	}
+	wg.Add(1)
+	go receiveData(socket, entityAddr, data, dataPath, broadcastAddr)
+	wg.Wait()
 }
 
 func lookupEndpoint(socket *net.UDPConn, addr *net.UDPAddr) {
+	time.Sleep(1 * time.Second)
+
 	sourceID := prepID(os.Getenv("SOURCE_ID"))
 	destID := prepID(os.Getenv("DEST_ID"))
 	buffer := encode(make([]byte, 9), sourceID, 0, destID)
@@ -82,34 +79,10 @@ func streamData(socket *net.UDPConn, data []os.DirEntry, dataPath string, addr *
 	frameIndex++
 }
 
-func receiveDataClient(socket *net.UDPConn, entityAddr string, data []os.DirEntry, dataPath string) {
+func receiveData(socket *net.UDPConn, entityAddr string, data []os.DirEntry, dataPath string, broadcastAddr *net.UDPAddr) {
 	defer wg.Done()
 
-	for {
-		buffer := make([]byte, 65000)
-
-		_, addr, err := socket.ReadFromUDP(buffer)
-		if err != nil {
-			println("Error reading from server: ", err.Error())
-			continue
-		}
-
-		if addrStr := addr.String(); addrStr != entityAddr {
-			source, transferType, dest := decodeToStr(buffer)
-			if transferType == 2 {
-				println("Received ACK from entity at ", addrStr)
-				if frameIndex >= len(data) {
-					sendInfo(socket, addr, encode(make([]byte, 9), prepID(dest), 3, prepID(source)))
-				} else {
-					go streamData(socket, data, dataPath, addr, prepID(dest), prepID(source))
-				}
-			}
-		}
-	}
-}
-
-func receiveDataServer(socket *net.UDPConn, entityAddr string) {
-	defer wg.Done()
+	go lookupEndpoint(socket, broadcastAddr)
 
 	for {
 		buffer := make([]byte, 65000)
@@ -121,14 +94,22 @@ func receiveDataServer(socket *net.UDPConn, entityAddr string) {
 		}
 
 		source, transferType, dest := decodeToStr(buffer)
-
 		if addrStr := addr.String(); addrStr != entityAddr && dest == os.Getenv("SOURCE_ID") {
-			if transferType == 0 {
+			switch transferType {
+			case TransferTypeBroadcast:
 				println("Endpoint found!", addrStr)
 				go sendInfo(socket, addr, encode(make([]byte, 9), prepID(dest), 2, prepID(source)))
-			} else if transferType == 1 {
+			case TransferTypeData:
 				println("Received data from ", source)
 				go sendInfo(socket, addr, encode(make([]byte, 9), prepID(dest), 2, prepID(source)))
+			case TransferTypeAck:
+				println("Received ACK from entity at ", addrStr)
+				if frameIndex >= len(data) {
+					sendInfo(socket, addr, encode(make([]byte, 9), prepID(dest), 3, prepID(source)))
+					break
+				} else {
+					go streamData(socket, data, dataPath, addr, prepID(dest), prepID(source))
+				}
 			}
 		}
 	}
