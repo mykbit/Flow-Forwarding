@@ -119,6 +119,7 @@ func sendInfo(socket *net.UDPConn, addr *net.UDPAddr, buffer []byte) {
 	_, err := socket.WriteToUDP(buffer, addr)
 	if err != nil {
 		println("Error sending ACK: ", err.Error())
+		return
 	} else if buffer[4] == 2 {
 		println("Sent ACK to ", addr.String())
 	} else if buffer[4] == 3 {
