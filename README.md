@@ -7,7 +7,7 @@ from current routing tables. This approach finds practical application in scenar
 networks deployed in regions where traditional infrastructure is unavailable, such as those affected by natural
 disasters. 
 
-The design of forwarding mechanisms aims to reduce the reduce the communication necessary to establish forwarding information while providing flexibility and fault-tolerance. This project is a proof-of-concept implementation of this approach.
+The design of forwarding mechanisms aims to reduce the communication necessary to establish forwarding information while providing flexibility and fault-tolerance. This project is a proof-of-concept implementation of this approach.
 
 ## Features
 Flow Forwarding features two main components: endpoints and routers. The following are the capabilities of each component:
