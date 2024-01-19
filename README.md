@@ -1,4 +1,4 @@
-# Flow Forwaring
+# Flow Forwarding
 [Features](#features) | [Topology](#topology) | [Building and Running](#building-and-running) | [Customization](#customization)
 
 Flow Forwarding is an implementation of a reactive routing approach, serving as an overlay
